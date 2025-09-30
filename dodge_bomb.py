@@ -1,5 +1,6 @@
 import os
 import random
+import time
 import sys
 import pygame as pg
 
@@ -12,7 +13,6 @@ DELTA = {
     pg.K_RIGHT: (+5, 0),
 }
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
-
 
 def check_bound(rct: pg.Rect) -> tuple[bool, bool]:
     """
@@ -29,7 +29,7 @@ def check_bound(rct: pg.Rect) -> tuple[bool, bool]:
 
 def init_bb_imgs() -> tuple[list[pg.Surface], list[int]]:
     bb_imgs = []  # 爆弾画像リスト
-    for r in range(1,11):
+    for r in range(1,11):  # 半径50~95まで5刻み
         bb_img = pg.Surface((20*r, 20*r))  # 爆弾用の空Surface
         pg.draw.circle(bb_img, (255, 0, 0), (10*r, 10*r), 10*r)  # 赤い爆弾円
         bb_img.set_colorkey((0, 0, 0))  # 四隅の黒い部分を透過
@@ -37,15 +37,31 @@ def init_bb_imgs() -> tuple[list[pg.Surface], list[int]]:
         bb_accs = [a for a in range(1, 11)]  # 爆弾加速度リスト
     return bb_imgs, bb_accs
 
-# def get_kk_imgs() -> dict[tuple[int,int], pg.Surface]:
-#     kk_dict = {
-#         (0, 0): pg.transform.rotozoom(pg.image.load("fig/3.png"), 10, 0.9),
-#         (+5, 0): pg.transform.rotozoom(pg.image.load("fig/3.png"), 45, 0.9),
-#         (+5, -5): pg.transform.rotozoom(pg.image.load("fig/3.png"), 0, 0.9),
-#         (0, -5): pg.transform.rotozoom(pg.image.load("fig/3.png"), -45, 0.9)
-#     }
-    
+def gameover(screen: pg.Surface) -> None:
+    #黒背景
+    black = pg.Surface((WIDTH, HEIGHT))
+    black.fill((0, 0, 0))
+    black.set_alpha(150)
+    screen.blit(black, (0, 0))
+    # Game Over
+    font = pg.font.Font(None, 60)
+    text = font.render("Game Over", True, (255, 255, 255))
+    tx = WIDTH // 2 - text.get_width() // 2
+    ty = HEIGHT // 2 - text.get_height() // 2
+    screen.blit(text, (tx, ty))
+    #cry こうかとん
+    kk_over = pg.image.load("fig/8.png")
+    kk_over = pg.transform.rotozoom(kk_over, 0, 0.6)
+    #left こうかとん
+    left_rct = kk_over.get_rect(center=(tx - 80, HEIGHT // 2))
+    screen.blit(kk_over, left_rct)
+    #right こうかとん
+    right_rct = kk_over.get_rect(center=(tx + text.get_width() + 80, HEIGHT // 2))
+    screen.blit(kk_over, right_rct)
 
+    pg.display.update()
+    time.sleep(5)
+    
 
 def main():
     pg.display.set_caption("逃げろ！こうかとん")
@@ -62,14 +78,15 @@ def main():
     bb_rct.centery = random.randint(0, HEIGHT)  # 爆弾縦座標
     vx, vy = +5, +5  # 爆弾の速度
     clock = pg.time.Clock()
-    bb_imgs, bb_accs = init_bb_imgs()  # 爆弾画像リスト、加速度リスト
+    bb_imgs, bb_accs = init_bb_imgs()  # 爆弾リスト、加速度リスト
     tmr = 0  # 経過時間
     while True:
         for event in pg.event.get():
             if event.type == pg.QUIT: 
                 return
         screen.blit(bg_img, [0, 0]) 
-        if kk_rct.colliderect(bb_rct):  # こうかとんと爆弾の衝突判定
+        if kk_rct.colliderect(bb_rct): # こうかとんと爆弾の衝突判定
+            gameover(screen)
             return  # ゲームオーバー
 
         key_lst = pg.key.get_pressed()
@@ -100,8 +117,9 @@ def main():
             vy *= -1
         screen.blit(bb_img, bb_rct)  # 爆弾描画
         avx = vx*bb_accs[min(tmr//500, 9)]
-        bb_img = bb_imgs[min(tmr//500, 9)]
-        bb_rct.move_ip(avx, vy)  # 爆弾移動
+        avy = vy*bb_accs[min(tmr//500, 9)]
+        bb_img = bb_imgs[min(tmr//50, 9)]
+        bb_rct.move_ip(avx, avy)  # 爆弾移動
         screen.blit(kk_img, kk_rct)  # こうかとん描画
         pg.display.update()
         tmr += 1
