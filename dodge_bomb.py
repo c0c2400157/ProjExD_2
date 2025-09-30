@@ -13,17 +13,38 @@ DELTA = {
 }
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
+
 def check_bound(rct: pg.Rect) -> tuple[bool, bool]:
     """
-    引数:こうかとんRect or 爆弾Rect
-    戻り値:判定結果ダブル(横方向)
+    引数：こうかとんRect or ばくだんRect
+    戻り値：判定結果タプル（横方向，縦方向）
+    画面内ならTrue,画面外ならFalse
     """
     yoko, tate = True, True
-    if rct.left < 0 or WIDTH < rct.right:
+    if rct.left < 0 or WIDTH < rct.right:  # 横方向にはみ出ていたら
         yoko = False
-    if rct.top < 0 or HEIGHT < rct.bottom:
+    if rct.top < 0 or HEIGHT < rct.bottom: # 縦方向にはみ出ていたら
         tate = False
     return yoko, tate
+
+def init_bb_imgs() -> tuple[list[pg.Surface], list[int]]:
+    bb_imgs = []  # 爆弾画像リスト
+    for r in range(1,11):
+        bb_img = pg.Surface((20*r, 20*r))  # 爆弾用の空Surface
+        pg.draw.circle(bb_img, (255, 0, 0), (10*r, 10*r), 10*r)  # 赤い爆弾円
+        bb_img.set_colorkey((0, 0, 0))  # 四隅の黒い部分を透過
+        bb_imgs.append(bb_img)
+        bb_accs = [a for a in range(1, 11)]  # 爆弾加速度リスト
+    return bb_imgs, bb_accs
+
+# def get_kk_imgs() -> dict[tuple[int,int], pg.Surface]:
+#     kk_dict = {
+#         (0, 0): pg.transform.rotozoom(pg.image.load("fig/3.png"), 10, 0.9),
+#         (+5, 0): pg.transform.rotozoom(pg.image.load("fig/3.png"), 45, 0.9),
+#         (+5, -5): pg.transform.rotozoom(pg.image.load("fig/3.png"), 0, 0.9),
+#         (0, -5): pg.transform.rotozoom(pg.image.load("fig/3.png"), -45, 0.9)
+#     }
+    
 
 
 def main():
@@ -41,14 +62,15 @@ def main():
     bb_rct.centery = random.randint(0, HEIGHT)  # 爆弾縦座標
     vx, vy = +5, +5  # 爆弾の速度
     clock = pg.time.Clock()
-    tmr = 0
+    bb_imgs, bb_accs = init_bb_imgs()  # 爆弾画像リスト、加速度リスト
+    tmr = 0  # 経過時間
     while True:
         for event in pg.event.get():
             if event.type == pg.QUIT: 
                 return
         screen.blit(bg_img, [0, 0]) 
-        if kk_rct.colliderect(bb_rct):  # こうかとんが爆弾に当たったら
-            return# ゲーム終了
+        if kk_rct.colliderect(bb_rct):  # こうかとんと爆弾の衝突判定
+            return  # ゲームオーバー
 
         key_lst = pg.key.get_pressed()
         sum_mv = [0, 0]
@@ -72,11 +94,15 @@ def main():
         screen.blit(kk_img, kk_rct)
         bb_rct.move_ip(vx, vy)  # 爆弾移動
         yoko, tate = check_bound(bb_rct)
-        if not yoko:  # 横方向に壁に当たったら
-            vx *= -1  # 横方向の速度を反転
-        if not tate:  # 縦方向に壁に当たったら
-            vy *= -1  # 縦方向の速度を反転
+        if not yoko:  # 横方向にはみ出ていたら
+            vx *= -1
+        if not tate:  # 縦方向にはみ出ていたら
+            vy *= -1
         screen.blit(bb_img, bb_rct)  # 爆弾描画
+        avx = vx*bb_accs[min(tmr//500, 9)]
+        bb_img = bb_imgs[min(tmr//500, 9)]
+        bb_rct.move_ip(avx, vy)  # 爆弾移動
+        screen.blit(kk_img, kk_rct)  # こうかとん描画
         pg.display.update()
         tmr += 1
         clock.tick(50)
