@@ -61,7 +61,6 @@ def gameover(screen: pg.Surface) -> None:
 
     pg.display.update()
     time.sleep(5)
-    
 
 def main():
     pg.display.set_caption("逃げろ！こうかとん")
@@ -124,7 +123,6 @@ def main():
         pg.display.update()
         tmr += 1
         clock.tick(50)
-
 
 if __name__ == "__main__":
     pg.init()
